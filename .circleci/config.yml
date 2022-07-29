@@ -17,7 +17,7 @@ jobs:
       - image: cimg/base:stable
     steps:
       - checkout
-      - run: echo "deploy"
+      - run: echo "Check PR"
 workflows:
   version: 2
   build_and_deploy:
