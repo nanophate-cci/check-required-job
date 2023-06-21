@@ -12,7 +12,7 @@ jobs:
     steps:
       - checkout
       - run: echo "Rspec"
-      - run: sleep 500
+      - run: sleep 300
   deploy:
     docker:
       - image: cimg/base:stable
