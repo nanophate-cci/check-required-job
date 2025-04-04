@@ -1,31 +1,199 @@
 version: 2.1
+
+parameters:
+  run_integration_tests:
+    type: boolean
+    default: false
+  deploy_target:
+    type: enum
+    enum: ["staging", "production", "demo"]
+    default: "staging"
+
+executors:
+  default-executor:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+
 jobs:
   build:
-    docker:
-      - image: cimg/base:stable
+    executor: default-executor
     steps:
       - checkout
-      - run: echo "hello"
-  rspec:
-    docker:
-      - image: cimg/base:stable
+      - run: echo "Building application"
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  test:
+    executor: default-executor
     steps:
-      - checkout
-      - run: echo "Rspec"
-  deploy:
-    docker:
-      - image: cimg/base:stable
+      - attach_workspace:
+          at: .
+      - run: echo "Running unit tests"
+
+  integration_tests:
+    executor: default-executor
     steps:
-      - checkout
-      - run: echo "deploy"
+      - attach_workspace:
+          at: .
+      - run: echo "Running integration tests"
+
+  security_scan:
+    executor: default-executor
+    steps:
+      - attach_workspace:
+          at: .
+      - run: echo "Running security scan"
+
+  deploy_to_staging:
+    executor: default-executor
+    steps:
+      - attach_workspace:
+          at: .
+      - run: echo "Deploying to staging environment"
+
+  deploy_to_demo:
+    executor: default-executor
+    steps:
+      - attach_workspace:
+          at: .
+      - run: echo "Deploying to demo environment"
+
+  deploy_to_production:
+    executor: default-executor
+    steps:
+      - attach_workspace:
+          at: .
+      - run: echo "Deploying to production environment"
+
 workflows:
-  version: 2
-  build_and_deploy:
+  build_test_deploy:
     jobs:
       - build
-      - rspec
-      - approval-deploy:
-          type: approval
-      - deploy:
+
+      - test:
           requires:
-            - approval-deploy
+            - build
+
+      - integration_tests:
+          requires:
+            - test
+          filters:
+            branches:
+              only: 
+                - main
+                - develop
+                - /feature\/.*/
+
+      - security_scan:
+          requires:
+            - test
+
+      # Staging deployment with automated approval for non-production branches
+      - staging_approval:
+          type: approval
+          requires:
+            - test
+          filters:
+            branches:
+              ignore: 
+                - main
+                - production
+
+      - deploy_to_staging:
+          requires:
+            - staging_approval
+            - security_scan
+          filters:
+            branches:
+              ignore: 
+                - main
+                - production
+
+      # Automatic deployment to staging for develop branch
+      - deploy_to_staging:
+          name: auto_deploy_to_staging
+          requires:
+            - security_scan
+            - integration_tests
+          filters:
+            branches:
+              only: develop
+
+      # Demo environment deployment requires manual approval
+      - demo_approval:
+          type: approval
+          requires:
+            - security_scan
+          filters:
+            branches:
+              only: /demo\/.*/
+
+      - deploy_to_demo:
+          requires:
+            - demo_approval
+          filters:
+            branches:
+              only: /demo\/.*/
+
+      # Production deployment requires sequential approvals
+      - production_approval_1:
+          type: approval
+          requires:
+            - security_scan
+            - integration_tests
+          filters:
+            branches:
+              only: 
+                - main
+                - production
+
+      - production_approval_2:
+          type: approval
+          requires:
+            - production_approval_1
+          filters:
+            branches:
+              only: 
+                - main
+                - production
+
+      - deploy_to_production:
+          requires:
+            - production_approval_2
+          filters:
+            branches:
+              only: 
+                - main
+                - production
+
+  # Scheduled nightly pipeline with different approval flow
+  nightly_pipeline:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only: develop
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
+      - integration_tests:
+          requires:
+            - test
+      - security_scan:
+          requires:
+            - test
+      - nightly_staging_approval:
+          type: approval
+          requires:
+            - integration_tests
+            - security_scan
+      - deploy_to_staging:
+          name: nightly_deploy
+          requires:
+            - nightly_staging_approval
