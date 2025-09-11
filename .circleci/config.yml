@@ -28,10 +28,11 @@ workflows:
           type: approval
           requires:
             - rspec
-          filters:
-            branches:
-              only:
-                - main
+          when:
+            not:
+              matches:
+                pattern: ".*\\[skip-approval\\].*"
+                value: << pipeline.trigger_parameters.github_app.commit_title >>
       - deploy:
           requires:
             - approval-deploy
