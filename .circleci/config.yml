@@ -5,7 +5,7 @@ jobs:
       - image: cimg/base:stable
     steps:
       - checkout
-      - run: echo "hello"
+      - run: echo "hellooooo"
   rspec:
     docker:
       - image: cimg/base:stable
@@ -28,10 +28,11 @@ workflows:
           type: approval
           requires:
             - rspec
-          filters:
-            branches:
-              only:
-                - main
+          when:
+            not:
+              matches:
+                pattern: ".*\\[skip-approval\\].*"
+                value: << pipeline.trigger_parameters.git.commit_message >>
       - deploy:
           requires:
             - approval-deploy
