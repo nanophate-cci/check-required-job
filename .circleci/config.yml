@@ -26,6 +26,12 @@ workflows:
       - rspec
       - approval-deploy:
           type: approval
+          requires:
+            - rspec
+          filters:
+            branches:
+              only:
+                - main
       - deploy:
           requires:
             - approval-deploy
