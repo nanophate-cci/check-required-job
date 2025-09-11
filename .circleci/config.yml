@@ -5,7 +5,7 @@ jobs:
       - image: cimg/base:stable
     steps:
       - checkout
-      - run: echo "hellooo"
+      - run: echo "hellooooo"
   rspec:
     docker:
       - image: cimg/base:stable
