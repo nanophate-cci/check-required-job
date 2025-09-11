@@ -32,7 +32,7 @@ workflows:
             not:
               matches:
                 pattern: ".*\\[skip-approval\\].*"
-                value: << pipeline.trigger_parameters.github_app.commit_title >>
+                value: << pipeline.trigger_parameters.git.commit_message >>
       - deploy:
           requires:
             - approval-deploy
