@@ -28,11 +28,6 @@ workflows:
           type: approval
           requires:
             - rspec
-          filters:
-            branches:
-              only:
-                - main
-                - update-*
       - deploy:
           requires:
             - approval-deploy
