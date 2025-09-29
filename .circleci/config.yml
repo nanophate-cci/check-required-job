@@ -32,6 +32,7 @@ workflows:
             branches:
               only:
                 - main
+                - update-*
       - deploy:
           requires:
             - approval-deploy
